@@ -1,6 +1,8 @@
 const passport = require("passport");
 const googleStrategy = require("passport-google-oauth20");
 const User = require("../models/user-model");
+const localStrategy = require("passport-local");
+const bcrypt = require("bcrypt");
 
 passport.serializeUser((user, done) => {
   console.log("serialize使用者...");
@@ -38,7 +40,7 @@ passport.use(
         console.log("發現新用戶，將資料儲存置資料庫");
         try {
           let newUser = new User({
-            name: profile.name,
+            name: profile.displayName,
             googleID: profile.id,
             thumbnail: profile.photos[0].value,
             email: profile.emails[0].value,
@@ -52,4 +54,20 @@ passport.use(
       }
     }
   )
+);
+
+passport.use(
+  new localStrategy(async (username, password, done) => {
+    let foundUser = await User.findOne({ email: username });
+    if (foundUser) {
+      let result = await bcrypt.compare(password, foundUser.password);
+      if (result) {
+        done(null, foundUser);
+      } else {
+        done(null, false);
+      }
+    } else {
+      done(null, false);
+    }
+  })
 );
